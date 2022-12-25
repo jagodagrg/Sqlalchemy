@@ -1,27 +1,18 @@
 import sqlalchemy
 import csv
-from sqlalchemy import Table, Column, Float, String, Integer, Date, MetaData, ForeignKey, create_engine
+from sqlalchemy import Table, Column, String, Float, Integer, Date, MetaData, ForeignKey, create_engine, update
 
 
-def create_headers(source_file):
+def create_dictionaries_from_csv(source_file):
     with open(source_file, 'r') as csv_file:
         csv_records = csv.reader(csv_file, delimiter=',')
+        dictionaries = []
         for count, value in enumerate(csv_records):
             if count == 0:
                 headers = value
-                return headers
-
-
-def create_values(source_file):
-    with open(source_file, 'r') as csv_file:
-        csv_records = csv.reader(csv_file, delimiter=',')
-        row = []
-        values = []
-        for count, value in enumerate(csv_records):
-            if count != 0:
-                row = value
-                values.append(row)
-    return values
+            else:
+                dictionaries.append(dict(zip(headers, value)))
+    return dictionaries
 
 
 if __name__ == "__main__":
@@ -29,37 +20,47 @@ if __name__ == "__main__":
     meta = MetaData()
     conn = engine.connect()
 
-    stations_headers = list(create_headers('clean_stations.csv'))
+    stations_dictionaries = create_dictionaries_from_csv('clean_stations.csv')
     stations = Table(
         'stations', meta,
-        Column(stations_headers[0], String, primary_key=True),
-        Column(stations_headers[1], String),
-        Column(stations_headers[2], String),
-        Column(stations_headers[3], String),
-        Column(stations_headers[4], String),
-        Column(stations_headers[5], String),
-        Column(stations_headers[6], String)
+        Column('station', String, primary_key=True),
+        Column('latitude', String),
+        Column('longitude', String),
+        Column('elevation', String),
+        Column('name', String),
+        Column('country', String),
+        Column('state', String)
     )
     meta.create_all(engine)
+    conn.execute(stations.insert(), stations_dictionaries)
 
-    stations_rows = create_values('clean_stations.csv')
-
-    for item in stations_rows:
-        conn.execute(stations.insert(), [{stations_headers[0]: item[0], stations_headers[1]: item[1], stations_headers[2]: item[2],
-                                          stations_headers[3]: item[3], stations_headers[4]: item[4], stations_headers[5]: item[5], stations_headers[6]: item[6]}])
-
-    measure_headers = list(create_headers('clean_measure.csv'))
+    measure_dictionaries = create_dictionaries_from_csv('clean_measure.csv')
     measure = Table(
         'measure', meta,
-        Column(stations_headers[0], String),
-        Column(stations_headers[1], String),
-        Column(stations_headers[2], String),
-        Column(stations_headers[3], String)
+        Column('station', String, ForeignKey('stations.station')),
+        Column('date', String),
+        Column('precip', String),
+        Column('tobs', Integer)
     )
     meta.create_all(engine)
+    conn.execute(measure.insert(), measure_dictionaries)
 
-    measure_rows = create_values('clean_stations.csv')
+    # testy modyfikacji
+    s = stations.select().where(stations.c.station == "USC00519397")
+    results = conn.execute(s).fetchall()
+    print(results)
 
-    for item in measure_rows:
-        conn.execute(stations.insert(), [
-                     {measure_headers[0]: item[0], measure_headers[1]: item[1], measure_headers[2]: item[2], measure_headers[3]: item[3]}])
+    stmt = stations.update().\
+        values(name='Waikiki 666').\
+        where(stations.c.station == 'USC00519397')
+    conn.execute(stmt)
+    s = stations.select().where(stations.c.station == "USC00519397")
+    results = conn.execute(s).fetchall()
+    print(results)
+
+    stmt = stations.delete().\
+        where(stations.c.station == 'USC00519397')
+    conn.execute(stmt)
+    s = stations.select().where(stations.c.station == "USC00519397")
+    results = conn.execute(s).fetchall()
+    print(results)
