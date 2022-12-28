@@ -1,6 +1,6 @@
 import sqlalchemy
 import csv
-from sqlalchemy import Table, Column, String, Float, Integer, Date, MetaData, ForeignKey, create_engine
+from sqlalchemy import Table, Column, String, Float, Integer, Date, MetaData, ForeignKey, create_engine, update
 
 
 def create_dictionaries_from_csv(source_file):
@@ -13,37 +13,6 @@ def create_dictionaries_from_csv(source_file):
             else:
                 dictionaries.append(dict(zip(headers, value)))
     return dictionaries
-
-
-def select_row(table, station_id):
-    if table == 'stations':
-        s = stations.select().where(stations.c.station == station_id)
-    else:
-        s = measure.select().where(measure.c.station == station_id)
-    results = conn.execute(s).fetchall()
-    return results
-
-
-def update_name(table, station_id, new_name):
-    if table == 'stations':
-        s = stations.update().\
-            values(name=new_name).\
-            where(stations.c.station == station_id)
-    else:
-        s = measure.update().\
-            values(name=new_name).\
-            where(measure.c.station == station_id)
-    conn.execute(s)
-
-
-def delete(table, station_id):
-    if table == 'stations':
-        d = stations.delete().\
-            where(stations.c.station == station_id)
-    else:
-        d = measure.delete().\
-            where(measure.c.station == station_id)
-    conn.execute(d)
 
 
 if __name__ == "__main__":
@@ -75,3 +44,23 @@ if __name__ == "__main__":
     )
     meta.create_all(engine)
     conn.execute(measure.insert(), measure_dictionaries)
+
+    # testy modyfikacji
+    s = stations.select().where(stations.c.station == "USC00519397")
+    results = conn.execute(s).fetchall()
+    print(results)
+
+    stmt = stations.update().\
+        values(name='Waikiki 123').\
+        where(stations.c.station == 'USC00519397')
+    conn.execute(stmt)
+    s = stations.select().where(stations.c.station == "USC00519397")
+    results = conn.execute(s).fetchall()
+    print(results)
+
+    stmt = stations.delete().\
+        where(stations.c.station == 'USC00513117')
+    conn.execute(stmt)
+    s = stations.select().where(stations.c.station == "USC00513117")
+    results = conn.execute(s).fetchall()
+    print(results)
