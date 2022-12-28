@@ -31,9 +31,6 @@ if __name__ == "__main__":
         Column('country', String),
         Column('state', String)
     )
-    meta.create_all(engine)
-    conn.execute(stations.insert(), stations_dictionaries)
-
     measure_dictionaries = create_dictionaries_from_csv('clean_measure.csv')
     measure = Table(
         'measure', meta,
@@ -43,6 +40,7 @@ if __name__ == "__main__":
         Column('tobs', Integer)
     )
     meta.create_all(engine)
+    conn.execute(stations.insert(), stations_dictionaries)
     conn.execute(measure.insert(), measure_dictionaries)
 
     # testy modyfikacji
